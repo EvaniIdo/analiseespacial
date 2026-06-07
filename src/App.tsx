@@ -73,7 +73,7 @@ export default function App() {
             </li>
             <li>
               <a 
-                href="https://github.com/EvaniIdo/Analise-Espacial" 
+                href="https://github.com/EvaniIdo/Analise_Espacial" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="nav-link"
@@ -322,7 +322,7 @@ export default function App() {
             &copy; {new Date().getFullYear()} <strong>Análise Espacial IPS Brasil</strong>.
           </div>
           <div className="footer-right">
-            <a href="https://github.com/EvaniIdo/Analise-Espacial" target="_blank" rel="noopener noreferrer" className="footer-link">
+            <a href="https://github.com/EvaniIdo/Analise_Espacial" target="_blank" rel="noopener noreferrer" className="footer-link">
               GitHub
             </a>
             <a href="/relatorio.html" target="_blank" className="footer-link">
