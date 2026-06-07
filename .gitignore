@@ -1,0 +1,22 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+.tmp/

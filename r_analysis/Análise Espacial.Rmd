@@ -1,0 +1,154 @@
+---
+title: "Análise Exploratória: Índice de Progresso Social (IPS) 2025"
+subtitle: "Disciplina: Introdução à Análise Espacial (CC0314) - Prof. Dr. Júlio Francisco Barros Neto"
+author: "Marcus Vinicius - 556938"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output: 
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+# Configurações globais para deixar o relatório limpo
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## 1. Introdução
+Este relatório apresenta uma Análise Exploratória de Dados (EDA) baseada nos microdados do Índice de Progresso Social (IPS) Brasil 2025. O objetivo é compreender a distribuição da qualidade de vida nos municípios brasileiros e sua relação com o desempenho econômico (PIB per capita), preparando a base de atributos para futuras modelagens espaciais e identificação de clusters (aglomerados).
+
+## 2. Preparação e Tratamento dos Dados
+Para garantir a confiabilidade da análise, os dados brutos passaram por um processo de limpeza. As variáveis financeiras e de índices, originalmente no padrão brasileiro (com vírgulas e pontos de milhar), foram convertidas para o formato numérico internacional.
+
+```{r carregamento}
+# Carregando pacotes necessários
+library(tidyverse)
+library(plotly)
+
+# Carregamento dos dados
+caminho <- "C:/Users/aluno/Downloads/IPSBrasil2025.csv"
+dados <- read.csv(caminho, stringsAsFactors = FALSE, encoding = "UTF-8", check.names = FALSE)
+
+# Tratamento de Dados
+dados_limpos <- dados %>%
+  mutate(
+    IPS = as.numeric(str_replace(`Índice de Progresso Social`, ",", ".")),
+    PIB_capita = as.numeric(str_replace(str_remove_all(`PIB per capita 2021`, "\\."), ",", ".")),
+    UF = as.factor(UF)
+  ) %>%
+  filter(!is.na(IPS) & !is.na(PIB_capita))
+```
+
+## 3. Distribuição do Índice de Progresso Social
+A visualização abaixo apresenta a distribuição de frequências do IPS em todo o território nacional. A curva de densidade normal sobreposta permite verificar visualmente a dispersão dos municípios em relação à média nacional.
+
+```{r histograma}
+# Cálculo de parâmetros para a curva normal teórica
+mu_ips <- mean(dados_limpos$IPS, na.rm = TRUE)
+sigma_ips <- sd(dados_limpos$IPS, na.rm = TRUE)
+paleta_med <- c(fill = "#4C72B0", line = "red")
+
+# Plotagem do Histograma
+ggplot(dados_limpos, aes(x = IPS)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30, fill = paleta_med["fill"], color = "white", alpha = 0.9) +
+  stat_function(fun = dnorm, args = list(mean = mu_ips, sd = sigma_ips), color = "black", linewidth = 1) +
+  stat_function(fun = dnorm, args = list(mean = mu_ips, sd = sigma_ips),
+                xlim = c(mu_ips - sigma_ips, mu_ips + sigma_ips),
+                geom = "area", fill = paleta_med["fill"], alpha = 0.4) +
+  geom_vline(xintercept = mu_ips, color = paleta_med["line"], linetype = "dashed", linewidth = 1) +
+  labs(
+    title = "Histograma com Curva de Densidade (IPS 2025)",
+    subtitle = "A área sombreada representa +/- 1 desvio padrão da média.",
+    x = "IPS", y = "Densidade"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.minor = element_blank(), plot.title = element_text(face = "bold"))
+```
+
+## 4. Desigualdade Regional: Média por Estado
+Agrupando os dados por Unidade da Federação (UF), é possível observar de forma clara a desigualdade regional do país. A linha tracejada vermelha representa a média nacional, dividindo os estados em dois grandes grupos de desempenho sociodemográfico.
+
+```{r grafico_barras}
+# Extraindo informações para o rodapé
+media_nacional <- mean(dados_limpos$IPS, na.rm = TRUE)
+maior_mun <- dados_limpos %>% filter(IPS == max(IPS, na.rm = TRUE))
+menor_mun <- dados_limpos %>% filter(IPS == min(IPS, na.rm = TRUE))
+
+texto_rodape <- paste0(
+  "Média Nacional: ", round(media_nacional, 2), "\n",
+  "Maior: ", maior_mun$Município[1], " - ", maior_mun$UF[1], " (", round(maior_mun$IPS[1], 2), ") | ",
+  "Menor: ", menor_mun$Município[1], " - ", menor_mun$UF[1], " (", round(menor_mun$IPS[1], 2), ")"
+)
+
+# Agrupamento
+media_por_uf <- dados_limpos %>%
+  group_by(UF) %>%
+  summarise(Media_IPS = mean(IPS, na.rm = TRUE)) %>%
+  arrange(desc(Media_IPS))
+
+# Plotagem
+ggplot(media_por_uf, aes(x = reorder(UF, -Media_IPS), y = Media_IPS, fill = Media_IPS)) +
+  geom_col(color = "black", alpha = 0.8) +
+  geom_hline(yintercept = media_nacional, color = "red", linetype = "dashed", linewidth = 1) +
+  scale_fill_viridis_c() +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Média de IPS por Estado",
+    subtitle = "A linha tracejada vermelha indica a Média Nacional",
+    x = "Estado (UF)", y = "IPS Médio", caption = texto_rodape
+  ) +
+  theme(legend.position = "none", plot.caption = element_text(hjust = 0.5, face = "bold", margin = margin(t = 15)))
+```
+
+## 5. Relação Econômica e Interatividade
+
+Para investigar se um alto PIB per capita garante um alto Progresso Social, utilizamos um gráfico de dispersão com o eixo X em escala logarítmica.
+
+> **Instrução:** Passe o mouse sobre os pontos do gráfico abaixo para identificar o município, seu PIB exato e sua nota no IPS. Utilize as ferramentas no canto superior direito do gráfico para dar zoom em agrupamentos específicos.
+
+## 5. Relação Econômica e Interatividade
+
+Para investigar se um alto PIB per capita garante um alto Progresso Social, utilizamos um gráfico de dispersão com o eixo X em escala logarítmica. 
+
+> **Instrução:** Utilize os filtros abaixo para isolar estados ou municípios específicos. Passe o mouse sobre os pontos para detalhes.
+
+```{r grafico_interativo_final}
+library(crosstalk)
+library(plotly)
+
+# 1. Preparação: Calcular a correlação exata
+correlacao <- cor(log10(dados_limpos$PIB_capita), dados_limpos$IPS, use = "complete.obs")
+
+# 2. Criar o objeto SharedData para os filtros funcionarem
+shared_dados <- SharedData$new(dados_limpos)
+
+# 3. Criar os Filtros (Seleção de Estado e Busca de Município)
+bscols(
+  filter_checkbox("uf_filter", "Filtrar por UF:", shared_dados, ~UF, inline = TRUE),
+  filter_select("mun_filter", "Pesquisar Município:", shared_dados, ~Município, multiple = FALSE)
+)
+
+# 4. Base do Gráfico 3 usando o SharedData
+grafico3_base <- ggplot(shared_dados, aes(x = PIB_capita, y = IPS, 
+                                          text = paste("Município:", Município, "-", UF,
+                                                       "<br>PIB per capita: R$", scales::label_number(big.mark = ".", decimal.mark = ",")(PIB_capita),
+                                                       "<br>IPS:", round(IPS, 2)))) +
+  geom_point(alpha = 0.4, color = "#4C72B0", size = 1.5) +
+  geom_smooth(method = "lm", color = "darkred", linetype = "dashed", linewidth = 1, se = FALSE) +
+  scale_x_log10(labels = scales::label_number(big.mark = ".", decimal.mark = ",")) +
+  theme_bw(base_size = 12) +
+  labs(
+    title = "Relação entre Desempenho Econômico e Progresso Social",
+    x = "PIB per capita (R$ - 2021)", 
+    y = "Índice de Progresso Social (IPS)"
+  )
+
+# 5. Converter para interativo e adicionar a anotação da correlação
+ggplotly(grafico3_base, tooltip = "text") %>%
+  layout(annotations = list(
+    x = 1, y = 1.05, text = paste0("Correlação (R) = ", round(correlacao, 2)), 
+    showarrow = FALSE, xref = 'paper', yref = 'paper', xanchor = 'right', yanchor = 'bottom',
+    font = list(size = 12, color = "#555555", face = "italic")
+  ))
+```
